@@ -1,0 +1,481 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Belt Inspector — Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h2>Belt Inspector</h2>
+    <div>
+      <button id="goView" class="linkbtn">Admin View</button>
+      <button id="logout">Logout</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <form id="inspectForm" class="card">
+      <h3>Inspection Form</h3>
+      <label>Date of inspection
+        <input id="inspectDate" type="date" required>
+      </label>
+
+      <label>Department
+        <select id="departmentSelect"><option value="">-- select --</option></select>
+      </label>
+
+      <label>Conveyor
+        <select id="conveyorSelect"><option value="">-- select --</option></select>
+      </label>
+
+      <div id="conveyorMeta" class="meta" style="display:none">
+        <strong>Conveyor metadata (master)</strong>
+        <p>Length (m): <span id="meta_length"></span></p>
+        <p>Width (mm): <span id="meta_width"></span></p>
+        <p>Grade: <span id="meta_grade"></span></p>
+        <p>Replacement date: <span id="meta_repl"></span></p>
+        <p>Master joints: <span id="meta_joints"></span></p>
+      </div>
+
+      <hr>
+
+      <!-- Top cover -->
+      <fieldset>
+        <legend>Mother belt TOP cover condition (choose all that apply)</legend>
+        <label><input type="checkbox" name="topcover" value="ply_visible"> Ply visible</label>
+        <label><input type="checkbox" name="topcover" value="internal_cracks"> Internal cracks</label>
+        <label><input type="checkbox" name="topcover" value="rubber_peel"> Rubber peel out <input type="number" class="cond rubber_len" placeholder="mm" style="display:none"></label>
+        <label><input type="checkbox" name="topcover" value="line_marks"> Line marks/groove marks</label>
+        <label><input type="checkbox" name="topcover" value="other"> Any other abnormalities <input type="text" class="cond other_text" placeholder="describe" style="display:none"></label>
+        <label><input type="checkbox" name="topcover" value="through_cut"> Through cut <input type="number" class="cond through_len" placeholder="length mm" style="display:none"></label>
+        <label><input type="checkbox" name="topcover" value="cross_cut"> Cross cut <input type="number" class="cond cross_len" placeholder="size mm" style="display:none"></label>
+        <label><input type="checkbox" name="topcover" value="ok"> Belt condition is ok</label>
+      </fieldset>
+
+      <!-- Bottom cover (similar) -->
+      <fieldset>
+        <legend>Mother belt BOTTOM cover condition</legend>
+        <label><input type="checkbox" name="bottomcover" value="ply_visible"> Ply visible</label>
+        <label><input type="checkbox" name="bottomcover" value="internal_cracks"> Internal cracks</label>
+        <label><input type="checkbox" name="bottomcover" value="rubber_peel"> Rubber peel out <input type="number" class="cond rubber_len" placeholder="mm" style="display:none"></label>
+        <label><input type="checkbox" name="bottomcover" value="line_marks"> Line marks/groove marks</label>
+        <label><input type="checkbox" name="bottomcover" value="other"> Any other abnormalities <input type="text" class="cond other_text" placeholder="describe" style="display:none"></label>
+        <label><input type="checkbox" name="bottomcover" value="ok"> Belt condition is ok</label>
+      </fieldset>
+
+      <!-- Joints counts -->
+      <label>Number of HOT joints
+        <input id="hot_joints" type="number" min="0" value="0">
+      </label>
+      <div id="hot_joints_container"></div>
+
+      <label>Number of COLD joints
+        <input id="cold_joints" type="number" min="0" value="0">
+      </label>
+      <div id="cold_joints_container"></div>
+
+      <hr>
+
+      <!-- Sway -->
+      <fieldset>
+        <legend>Sway in belt</legend>
+        <label><input type="checkbox" name="sway" value="carrying_side"> Carrying side</label>
+        <div class="indent small" id="carry_questions" style="display:none">
+          <label>Is it rubbing with any structural part/idlers? <input id="carry_rub" type="text" placeholder="where"></label>
+        </div>
+
+        <label><input type="checkbox" name="sway" value="idlers"> Idlers (choose carrying or impact below)</label>
+        <div class="indent small">
+          <label><input type="checkbox" name="idler_type" value="carrying"> carrying</label>
+          <label><input type="checkbox" name="idler_type" value="impact"> impact</label>
+        </div>
+
+        <label><input type="checkbox" name="sway" value="return_side"> Return side</label>
+        <div class="indent small" id="return_questions" style="display:none">
+          <label>Is it rubbing with structure/return idler frames? <input id="return_rub" type="text" placeholder="where"></label>
+        </div>
+
+        <label><input type="checkbox" name="sway" value="anything_else"> Anything else <input id="sway_else" type="text" placeholder="describe"></label>
+      </fieldset>
+
+      <!-- Lagging -->
+      <fieldset>
+        <legend>Lagging damaged</legend>
+        <label><input type="checkbox" name="lagging" value="head_pulley"> Head pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="snub_pulley"> Snub pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="head_bend"> Head bend pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="pressure"> Pressure/Deflector pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="upper_bend"> Upper bend pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="lower_bend"> Lower bend pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="takeup"> Take pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="discharge"> Discharge pulley lagging damaged</label>
+        <label><input type="checkbox" name="lagging" value="ok"> All laggings OK</label>
+      </fieldset>
+
+      <!-- Idler damaged -->
+      <fieldset>
+        <legend>Idler damaged / jammed</legend>
+        <label>Carrying idlers damaged: <input id="carrying_damaged" type="number" min="0" value="0"> jammed: <input id="carrying_jammed" type="number" min="0" value="0"></label>
+        <label>Impact idlers damaged: <input id="impact_damaged" type="number" min="0" value="0"> jammed: <input id="impact_jammed" type="number" min="0" value="0"></label>
+        <label>Return idlers damaged: <input id="return_damaged" type="number" min="0" value="0"> jammed: <input id="return_jammed" type="number" min="0" value="0"></label>
+      </fieldset>
+
+      <!-- Housekeeping -->
+      <fieldset>
+        <legend>Housekeeping condition</legend>
+        <label><input type="checkbox" name="hk" value="deck_plate_jammed"> Deck plate jammed with spillage material <input class="cond hk_loc" placeholder="where (head/tail/..) " style="display:none"></label>
+        <label><input type="checkbox" name="hk" value="return_side_jammed"> Return side jammed <input class="cond hk_loc" placeholder="where" style="display:none"></label>
+        <label><input type="checkbox" name="hk" value="between_pulley"> Between pulley jammed <input class="cond hk_pulley" placeholder="which pulley" style="display:none"></label>
+      </fieldset>
+
+      <!-- Scrapper -->
+      <fieldset>
+        <legend>Scrapper present / effectiveness</legend>
+        <label><input type="checkbox" name="scrapper" value="primary"> Primary scrapper present</label>
+        <div class="indent small">
+          <label><input type="radio" name="primary_eff" value="effective"> Effective</label>
+          <label><input type="radio" name="primary_eff" value="ineffective"> Ineffective</label>
+        </div>
+
+        <label><input type="checkbox" name="scrapper" value="secondary"> Secondary scrapper present</label>
+        <div class="indent small">
+          <label><input type="radio" name="secondary_eff" value="effective"> Effective</label>
+          <label><input type="radio" name="secondary_eff" value="ineffective"> Ineffective</label>
+        </div>
+
+        <label><input type="checkbox" name="scrapper" value="v_scrapper_missing"> V scrapper missing</label>
+        <div class="indent small">
+          <label><input type="radio" name="v_eff" value="effective"> Effective</label>
+          <label><input type="radio" name="v_eff" value="ineffective"> Ineffective</label>
+        </div>
+
+        <label><input type="checkbox" name="scrapper" value="diagonal_missing"> Diagonal scrapper missing</label>
+        <div class="indent small">
+          <label><input type="radio" name="diag_eff" value="effective"> Effective</label>
+          <label><input type="radio" name="diag_eff" value="ineffective"> Ineffective</label>
+        </div>
+      </fieldset>
+
+      <!-- Skirt rubber -->
+      <fieldset>
+        <legend>Skirt rubber</legend>
+        <label><input type="radio" name="skirt" value="standard"> Standard skirt rubber</label>
+        <label><input type="radio" name="skirt" value="nonstandard"> Non standard skirt rubber</label>
+        <label><input type="radio" name="skirt" value="damaged"> Skirt rubber is damaged</label>
+        <label><input type="radio" name="skirt" value="ok"> Skirt rubber is ok</label>
+      </fieldset>
+
+      <!-- Take up clearance -->
+      <label>Take up clearance (mm)
+        <input id="takeup_clearance" type="text" placeholder="e.g. 20 mm">
+      </label>
+
+      <label><input id="suggest_update" type="checkbox"> Suggest master update with these values (admin approval required)</label>
+
+      <div class="row">
+        <button type="button" id="computeBtn" class="primary">Compute Summary & Health</button>
+        <button type="submit" class="save">Save Report</button>
+        <button type="button" id="printBtn">Print</button>
+      </div>
+
+      <div id="summaryBox" style="display:none" class="card small">
+        <h4>Summary</h4>
+        <pre id="summaryText"></pre>
+        <h4>Health score: <span id="healthScore"></span>/100</h4>
+      </div>
+    </form>
+  </main>
+
+<script>
+  // ========== FIREBASE CONFIG ==========
+  const firebaseConfig = /* FIREBASE_CONFIG */ {};
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Redirect to login if not signed in
+  auth.onAuthStateChanged(user => {
+    if(!user) {
+      window.location = 'index.html';
+    }
+  });
+
+  // UI elements
+  const deptSel = document.getElementById('departmentSelect');
+  const convSel = document.getElementById('conveyorSelect');
+  const metaBox = document.getElementById('conveyorMeta');
+
+  // Load conveyors.json
+  async function loadConveyors() {
+    try {
+      const resp = await fetch('js/conveyors.json');
+      const data = await resp.json();
+      window.CONVEYOR_DATA = data;
+      // populate departments
+      Object.keys(data).sort().forEach(d=>{
+        const o = document.createElement('option'); o.value=d; o.text=d; deptSel.appendChild(o);
+      });
+    } catch(err) {
+      alert('Unable to load conveyors.json. Ensure file is at public/js/conveyors.json and you are running via a local server.');
+      console.error(err);
+    }
+  }
+  loadConveyors();
+
+  deptSel.addEventListener('change', ()=>{
+    convSel.innerHTML = '<option value="">-- select --</option>';
+    const arr = window.CONVEYOR_DATA[deptSel.value] || [];
+    arr.forEach(c=>{
+      const o = document.createElement('option'); o.value = c.conveyor_id; o.text = c.conveyor_name;
+      o.dataset.meta = JSON.stringify(c);
+      convSel.appendChild(o);
+    });
+    metaBox.style.display = 'none';
+  });
+
+  convSel.addEventListener('change', ()=>{
+    const opt = convSel.selectedOptions[0];
+    if(!opt || !opt.dataset.meta) { metaBox.style.display='none'; return; }
+    const m = JSON.parse(opt.dataset.meta);
+    document.getElementById('meta_length').innerText = m.belt_length_m || '';
+    document.getElementById('meta_width').innerText  = m.belt_width_mm || '';
+    document.getElementById('meta_grade').innerText  = m.grade || '';
+    document.getElementById('meta_repl').innerText   = m.replacement_date || '';
+    document.getElementById('meta_joints').innerText = m.no_of_joints || 0;
+    metaBox.style.display = 'block';
+    // prefill joint counts
+    document.getElementById('hot_joints').value = m.no_of_joints || 0;
+    document.getElementById('cold_joints').value = 0;
+    // store master snapshot
+    window.currentConveyorMaster = m;
+  });
+
+  // Conditional inputs for checkboxes
+  document.addEventListener('change', (e)=>{
+    if(e.target && e.target.type === 'checkbox') {
+      // find conditional input in same label
+      const parent = e.target.parentElement;
+      const cond = parent.querySelectorAll('.cond');
+      cond.forEach(c=> c.style.display = e.target.checked ? 'inline-block' : 'none');
+    }
+    // show carry/return questions
+    const carry = document.querySelector('input[name="sway"][value="carrying_side"]');
+    document.getElementById('carry_questions').style.display = carry && carry.checked ? 'block' : 'none';
+    const ret = document.querySelector('input[name="sway"][value="return_side"]');
+    document.getElementById('return_questions').style.display = ret && ret.checked ? 'block' : 'none';
+  });
+
+  // Dynamic joint forms
+  function makeJointForm(containerId, type, count) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    for(let i=1;i<=count;i++){
+      const fieldset = document.createElement('fieldset');
+      fieldset.innerHTML = `<legend>${type.toUpperCase()} Joint ${i}</legend>
+        <label><input type="checkbox" name="${type}_j${i}" value="step_crack"> step crack</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="channel_crack"> channel crack</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="top_open"> top cover open</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="bottom_open"> bottom cover open</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="air_pocket"> air pocket</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="cross_cut"> cross cut <input type="number" class="cond" placeholder="mm" style="display:none"></label>
+        <label><input type="checkbox" name="${type}_j${i}" value="ply_visible"> ply visible</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="patching_present"> patching present</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="patching_damaged"> patching damaged</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="rubber_peel"> rubber peel out <input type="number" class="cond" placeholder="len mm" style="display:none"></label>
+        <label><input type="checkbox" name="${type}_j${i}" value="hole_present"> hole present</label>
+        <label><input type="checkbox" name="${type}_j${i}" value="channel_gap"> channel gap</label>
+      `;
+      container.appendChild(fieldset);
+    }
+  }
+
+  document.getElementById('hot_joints').addEventListener('input', (e)=> {
+    const v = parseInt(e.target.value) || 0;
+    makeJointForm('hot_joints_container','hot',v);
+  });
+  document.getElementById('cold_joints').addEventListener('input', (e)=> {
+    const v = parseInt(e.target.value) || 0;
+    makeJointForm('cold_joints_container','cold',v);
+  });
+
+  // Compute summary & health score (basic heuristic)
+  function computeSummaryAndScore() {
+    const summary = [];
+    let score = 100;
+
+    // Check top cover
+    const topChecked = Array.from(document.querySelectorAll('input[name="topcover"]:checked')).map(i=>i.value);
+    if(topChecked.includes('ply_visible')) { summary.push('Top: ply visible'); score -= 25; }
+    if(topChecked.includes('internal_cracks')) { summary.push('Top: internal cracks'); score -= 20; }
+    if(topChecked.includes('through_cut')) { const val = document.querySelector('.through_len')?.value || 'unknown'; summary.push('Top: through cut ' + val + ' mm'); score -= 30; }
+    if(topChecked.includes('ok')) { summary.push('Top: OK'); }
+
+    // joints: simple deductions
+    const hotCount = parseInt(document.getElementById('hot_joints').value || 0);
+    for(let i=1;i<=hotCount;i++){
+      const sel = Array.from(document.querySelectorAll(`input[name="hot_j${i}"]:checked`)).map(x=>x.value);
+      if(sel.length) {
+        summary.push(`Hot joint ${i}: ${sel.join(', ')}`);
+        if(sel.includes('step_crack')||sel.includes('channel_crack')) score -= 8;
+        if(sel.includes('top_open')||sel.includes('bottom_open')) score -= 12;
+        if(sel.includes('patching_damaged')) score -= 15;
+      }
+    }
+
+    if(score < 0) score = 0;
+    if(score > 100) score = 100;
+
+    return { summaryText: summary.join('\n') || 'No major abnormalities noted', score };
+  }
+
+  document.getElementById('computeBtn').addEventListener('click', ()=>{
+    const res = computeSummaryAndScore();
+    document.getElementById('summaryText').innerText = res.summaryText;
+    document.getElementById('healthScore').innerText = res.score;
+    document.getElementById('summaryBox').style.display = 'block';
+  });
+
+  // Build JSON of form answers (basic)
+  function collectFormAnswers() {
+    const obj = {};
+    obj.date = document.getElementById('inspectDate').value || '';
+    obj.department = deptSel.value || '';
+    obj.conveyor_id = convSel.value || '';
+    obj.conveyor_name = convSel.selectedOptions[0] ? convSel.selectedOptions[0].text : '';
+
+    // top cover
+    obj.topcover = Array.from(document.querySelectorAll('input[name="topcover"]:checked')).map(i=>{
+      const val = i.value;
+      if(i.parentElement.querySelector('.cond')) {
+        const condInput = i.parentElement.querySelector('.cond');
+        if(condInput) return {key: val, note: condInput.value || ''};
+      }
+      return val;
+    });
+
+    // bottom cover
+    obj.bottomcover = Array.from(document.querySelectorAll('input[name="bottomcover"]:checked')).map(i=>{
+      const val = i.value;
+      if(i.parentElement.querySelector('.cond')) {
+        const condInput = i.parentElement.querySelector('.cond');
+        if(condInput) return {key: val, note: condInput.value || ''};
+      }
+      return val;
+    });
+
+    obj.hot_joints = parseInt(document.getElementById('hot_joints').value || 0);
+    obj.cold_joints = parseInt(document.getElementById('cold_joints') ? document.getElementById('cold_joints').value : 0);
+
+    // collect per joint details
+    obj.hot = [];
+    for(let i=1;i<=obj.hot_joints;i++){
+      const sel = Array.from(document.querySelectorAll(`input[name="hot_j${i}"]:checked`)).map(x=>{
+        const cond = x.parentElement.querySelector('.cond');
+        return cond ? {key:x.value, note:cond.value || ''} : x.value;
+      });
+      obj.hot.push(sel);
+    }
+    obj.cold = [];
+    for(let i=1;i<=obj.cold_joints;i++){
+      const sel = Array.from(document.querySelectorAll(`input[name="cold_j${i}"]:checked`)).map(x=>{
+        const cond = x.parentElement.querySelector('.cond');
+        return cond ? {key:x.value, note:cond.value || ''} : x.value;
+      });
+      obj.cold.push(sel);
+    }
+
+    // other fields (simple)
+    obj.sway = Array.from(document.querySelectorAll('input[name="sway"]:checked')).map(i=>i.value);
+    obj.sway_extra = {
+      carry_rub: document.getElementById('carry_rub')?.value || '',
+      return_rub: document.getElementById('return_rub')?.value || '',
+      sway_else: document.getElementById('sway_else')?.value || ''
+    };
+
+    obj.lagging = Array.from(document.querySelectorAll('input[name="lagging"]:checked')).map(i=>i.value);
+    obj.idlers = {
+      carrying_damaged: document.getElementById('carrying_damaged').value || 0,
+      carrying_jammed: document.getElementById('carrying_jammed').value || 0,
+      impact_damaged: document.getElementById('impact_damaged').value || 0,
+      impact_jammed: document.getElementById('impact_jammed').value || 0,
+      return_damaged: document.getElementById('return_damaged').value || 0,
+      return_jammed: document.getElementById('return_jammed').value || 0
+    };
+
+    obj.housekeeping = Array.from(document.querySelectorAll('input[name="hk"]:checked')).map(i=>{
+      const cond = i.parentElement.querySelector('.hk_loc') || i.parentElement.querySelector('.hk_pulley');
+      return cond ? {key:i.value, note: cond.value || ''} : i.value;
+    });
+
+    // scrapper / skirt / takeup
+    obj.scrapper = Array.from(document.querySelectorAll('input[name="scrapper"]:checked')).map(i=>i.value);
+    obj.scrapper_eff = {
+      primary: document.querySelector('input[name="primary_eff"]:checked')?.value || '',
+      secondary: document.querySelector('input[name="secondary_eff"]:checked')?.value || '',
+      v: document.querySelector('input[name="v_eff"]:checked')?.value || '',
+      diag: document.querySelector('input[name="diag_eff"]:checked')?.value || ''
+    };
+
+    obj.skirt = document.querySelector('input[name="skirt"]:checked')?.value || '';
+    obj.takeup_clearance = document.getElementById('takeup_clearance').value || '';
+    obj.suggest_update = document.getElementById('suggest_update').checked ? true : false;
+
+    // computed summary + score if available
+    obj.summary = document.getElementById('summaryText').innerText || '';
+    obj.health_score = parseInt(document.getElementById('healthScore').innerText || 0);
+
+    return obj;
+  }
+
+  // Save report to Firestore
+  document.getElementById('inspectForm').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const user = firebase.auth().currentUser;
+    if(!user) { alert('Login required'); window.location='index.html'; return; }
+
+    const report = collectFormAnswers();
+    report.inspector_uid = user.uid;
+    report.inspector_email = user.email;
+    report.created_at = firebase.firestore.Timestamp.now();
+
+    // include the master snapshot so history preserved
+    report.conveyor_snapshot = window.currentConveyorMaster || {};
+
+    // If suggest_update is true, put suggested fields separately (admin will review)
+    if(report.suggest_update) {
+      report.suggested_master_update = {
+        replacement_date: report.conveyor_snapshot.replacement_date || '',
+        no_of_joints: report.hot_joints + report.cold_joints
+      };
+    }
+
+    try {
+      await db.collection('reports').add(report);
+      alert('Report saved successfully.');
+      // clear or redirect
+      window.location = 'dashboard.html';
+    } catch(err) {
+      console.error(err);
+      alert('Save failed: ' + err.message);
+    }
+  });
+
+  // Print
+  document.getElementById('printBtn').addEventListener('click', ()=> window.print());
+
+  // Logout
+  document.getElementById('logout').addEventListener('click', ()=> {
+    firebase.auth().signOut().then(()=> window.location='index.html');
+  });
+
+  // Admin view button
+  document.getElementById('goView').addEventListener('click', ()=> window.location='view.html');
+
+</script>
+</body>
+</html>
